@@ -99,6 +99,51 @@ function DroneMarker({ drone }: { drone: DroneType }) {
   );
 }
 
+const TRAIL_COLOR: Record<string, string> = {
+  idle: 'hsl(215 16% 47%)',
+  delivering: 'hsl(189 94% 43%)',
+  returning: 'hsl(215 16% 47%)',
+  warning: 'hsl(38 92% 50%)',
+  critical: 'hsl(0 84% 60%)',
+  charging: 'hsl(50 100% 50%)',
+};
+
+function DroneTrails() {
+  const { drones, droneTrails } = useDashboard();
+
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none z-[5]">
+      <defs>
+        {drones.map(d => {
+          const color = TRAIL_COLOR[d.status] || TRAIL_COLOR.idle;
+          return (
+            <linearGradient key={`grad-${d.id}`} id={`trail-${d.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={color} stopOpacity="0" />
+              <stop offset="100%" stopColor={color} stopOpacity="0.6" />
+            </linearGradient>
+          );
+        })}
+      </defs>
+      {drones.map(d => {
+        const trail = droneTrails[d.id];
+        if (!trail || trail.length < 2) return null;
+        const points = trail.map(p => `${p.x}%,${p.y}%`).join(' ');
+        return (
+          <polyline
+            key={`trail-${d.id}`}
+            points={points}
+            fill="none"
+            stroke={`url(#trail-${d.id})`}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 export default function CityGrid() {
   const { drones, stormMode } = useDashboard();
 
@@ -113,6 +158,9 @@ export default function CityGrid() {
       {LANDMARKS.map(l => (
         <LandmarkNode key={l.id} landmark={l} />
       ))}
+
+      {/* Trails */}
+      <DroneTrails />
 
       {/* Drones */}
       {drones.map(d => (
