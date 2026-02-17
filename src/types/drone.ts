@@ -30,6 +30,7 @@ export interface LandmarkType {
 
 export interface DashboardState {
   drones: DroneType[];
+  droneTrails: Record<string, { x: number; y: number }[]>;
   selectedDroneId: string | null;
   stormMode: boolean;
   empBlast: boolean;
