@@ -40,12 +40,12 @@ function LandmarkNode({ landmark }: { landmark: LandmarkType }) {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  idle: 'bg-status-idle',
-  delivering: 'bg-status-delivering',
-  returning: 'bg-status-idle',
-  warning: 'bg-status-warning',
-  critical: 'bg-status-critical',
-  charging: 'bg-status-charging',
+  idle: 'text-status-idle',
+  delivering: 'text-status-delivering',
+  returning: 'text-status-idle',
+  warning: 'text-status-warning',
+  critical: 'text-status-critical',
+  charging: 'text-status-charging',
 };
 
 const STATUS_GLOW: Record<string, string> = {
@@ -74,7 +74,22 @@ function DroneMarker({ drone }: { drone: DroneType }) {
         <span className="absolute inset-0 rounded-full bg-status-critical/30 animate-ping" />
       )}
 
-      <div className={`w-3 h-3 rounded-full ${STATUS_COLOR[drone.status]} ${glow} ${isSelected ? 'ring-2 ring-primary' : ''} transition-shadow`} />
+      <svg width="18" height="18" viewBox="0 0 24 24" className={`${STATUS_COLOR[drone.status]} ${glow} ${isSelected ? 'drop-shadow-[0_0_4px_hsl(var(--primary))]' : ''} transition-all`}>
+        <g fill="currentColor" stroke="currentColor">
+          {/* Center body */}
+          <rect x="9" y="9" width="6" height="6" rx="1" />
+          {/* Arms */}
+          <line x1="9" y1="10" x2="4" y2="5" strokeWidth="1.2" fill="none" />
+          <line x1="15" y1="10" x2="20" y2="5" strokeWidth="1.2" fill="none" />
+          <line x1="9" y1="14" x2="4" y2="19" strokeWidth="1.2" fill="none" />
+          <line x1="15" y1="14" x2="20" y2="19" strokeWidth="1.2" fill="none" />
+          {/* Rotors */}
+          <circle cx="4" cy="5" r="2.5" fillOpacity="0.4" stroke="none" />
+          <circle cx="20" cy="5" r="2.5" fillOpacity="0.4" stroke="none" />
+          <circle cx="4" cy="19" r="2.5" fillOpacity="0.4" stroke="none" />
+          <circle cx="20" cy="19" r="2.5" fillOpacity="0.4" stroke="none" />
+        </g>
+      </svg>
 
       {/* Label on hover */}
       <div className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[9px] text-foreground/70 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap glass-panel px-1.5 py-0.5">
