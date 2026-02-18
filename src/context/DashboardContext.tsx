@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { DashboardState, DroneType } from '@/types/drone';
+import { DashboardState, DroneType, FleetEvent } from '@/types/drone';
 import { generateInitialDrones, getRandomLandmark, getRandomCargo, LANDMARKS } from '@/data/landmarks';
 
 const MAX_TRAIL_LENGTH = 40;
+const MAX_EVENTS = 100;
+let eventCounter = 0;
 
 interface DashboardContextType extends DashboardState {
   selectDrone: (id: string | null) => void;
@@ -23,11 +25,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [selectedDroneId, setSelectedDroneId] = useState<string | null>(null);
   const [stormMode, setStormMode] = useState(false);
   const [empBlast, setEmpBlast] = useState(false);
+  const [events, setEvents] = useState<FleetEvent[]>([]);
   const trailsRef = useRef<Record<string, { x: number; y: number }[]>>({});
   const [droneTrails, setDroneTrails] = useState<Record<string, { x: number; y: number }[]>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
+  const addEvent = useCallback((kind: FleetEvent['kind'], message: string, droneId?: string, landmark?: string) => {
+    const evt: FleetEvent = { id: `evt-${++eventCounter}`, timestamp: new Date(), kind, droneId, message, landmark };
+    setEvents(prev => [...prev.slice(-(MAX_EVENTS - 1)), evt]);
+  }, []);
+
   // Simulation tick
+  const pendingEventsRef = useRef<{ kind: FleetEvent['kind']; message: string; droneId?: string; landmark?: string }[]>([]);
+
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       setDrones(prev => {
@@ -42,6 +52,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < 1.5) {
+            const arrivedLandmark = LANDMARKS.find(l => l.id === drone.targetLandmarkId);
             const newTarget = getRandomLandmark(drone.targetLandmarkId);
             const c = getRandomCargo();
             const newBattery = Math.max(drone.battery - 3, 5);
@@ -50,6 +61,29 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
             else if (newBattery < 30) status = 'warning';
             else if (newTarget.kind === 'charging') status = 'charging';
             else if (newTarget.kind === 'hq') status = 'returning';
+
+            // Queue events
+            if (arrivedLandmark) {
+              pendingEventsRef.current.push({
+                kind: 'arrival',
+                message: `${drone.id} arrived at ${arrivedLandmark.label}`,
+                droneId: drone.id,
+                landmark: arrivedLandmark.id,
+              });
+            }
+            pendingEventsRef.current.push({
+              kind: 'departure',
+              message: `${drone.id} departing → ${newTarget.label}`,
+              droneId: drone.id,
+              landmark: newTarget.id,
+            });
+            if (status !== drone.status) {
+              pendingEventsRef.current.push({
+                kind: 'status_change',
+                message: `${drone.id} status: ${drone.status.toUpperCase()} → ${status.toUpperCase()}`,
+                droneId: drone.id,
+              });
+            }
 
             return {
               ...drone,
@@ -88,24 +122,37 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         trailsRef.current = trails;
         setDroneTrails({ ...trails });
 
+        // Flush pending events
+        if (pendingEventsRef.current.length > 0) {
+          const batch = pendingEventsRef.current.splice(0);
+          for (const e of batch) {
+            addEvent(e.kind, e.message, e.droneId, e.landmark);
+          }
+        }
+
         return newDrones;
       });
     }, 50);
 
     return () => clearInterval(intervalRef.current);
-  }, [stormMode]);
+  }, [stormMode, addEvent]);
 
   const selectDrone = useCallback((id: string | null) => setSelectedDroneId(id), []);
-  const toggleStorm = useCallback(() => setStormMode(s => !s), []);
+  const toggleStorm = useCallback(() => {
+    setStormMode(s => {
+      addEvent('system', !s ? 'STORM PROTOCOL activated' : 'STORM PROTOCOL deactivated');
+      return !s;
+    });
+  }, [addEvent]);
   const triggerEMP = useCallback(() => {
     setEmpBlast(true);
-    // Reset all drone targets
+    addEvent('system', 'EMP BLAST triggered — all targets reset');
     setDrones(prev => prev.map(d => {
       const newTarget = getRandomLandmark(d.targetLandmarkId);
       return { ...d, targetX: newTarget.x, targetY: newTarget.y, targetLandmarkId: newTarget.id };
     }));
     setTimeout(() => setEmpBlast(false), 600);
-  }, []);
+  }, [addEvent]);
 
   return (
     <DashboardContext.Provider value={{
@@ -114,6 +161,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       selectedDroneId,
       stormMode,
       empBlast,
+      events,
       selectDrone,
       toggleStorm,
       triggerEMP,
