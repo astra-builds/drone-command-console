@@ -28,10 +28,22 @@ export interface LandmarkType {
   y: number; // percentage
 }
 
+export type EventKind = 'arrival' | 'departure' | 'status_change' | 'system';
+
+export interface FleetEvent {
+  id: string;
+  timestamp: Date;
+  kind: EventKind;
+  droneId?: string;
+  message: string;
+  landmark?: string;
+}
+
 export interface DashboardState {
   drones: DroneType[];
   droneTrails: Record<string, { x: number; y: number }[]>;
   selectedDroneId: string | null;
   stormMode: boolean;
   empBlast: boolean;
+  events: FleetEvent[];
 }

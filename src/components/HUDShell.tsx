@@ -3,6 +3,7 @@ import CityGrid from './CityGrid';
 import FleetMonitor from './FleetMonitor';
 import DroneCockpit from './DroneCockpit';
 import GodMode from './GodMode';
+import EventLog from './EventLog';
 import { Activity, Wifi, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -70,6 +71,11 @@ export default function HUDShell() {
       {/* Right Panel (Cockpit) */}
       <div className="absolute right-0 top-10 bottom-0 z-30">
         <DroneCockpit />
+      </div>
+
+      {/* Event Log - Bottom Right */}
+      <div className="absolute bottom-8 right-4 z-30 hidden md:block">
+        <EventLog />
       </div>
 
       {/* Bottom status bar */}
